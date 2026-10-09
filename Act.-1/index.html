@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaFlow</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="NovaFlow">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header>
+    <img src="icons/icon-192x192.png" alt="Logo" width="40">
+    <h1>NovaFlow</h1>
+    <button id="btnInstall" hidden>Instalar</button>
+  </header>
+
+  <main>
+    <h2>NovaFlow Web App</h2>
+    <p>Aplicación web progresiva.</p>
+
+    <p>Nombre: NovaFlow Web App</p>
+    <p>Nombre corto: NovaFlow</p>
+    <p>Modo: standalone</p>
+    <p>Color del tema: #4f46e5</p>
+    <p>Color de fondo: #ffffff</p>
+    <p>Iconos: 192x192 y 512x512 px</p>
+  </main>
+
+  <footer>
+    <p>NovaFlow PWA</p>
+  </footer>
+
+  <script>
+    let deferredPrompt;
+    const btnInstall = document.getElementById('btnInstall');
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      btnInstall.hidden = false;
+    });
+
+    btnInstall.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      btnInstall.hidden = true;
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+</body>
+
+</html>
