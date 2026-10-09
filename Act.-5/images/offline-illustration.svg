@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background decorative circular grid -->
+  <circle cx="200" cy="140" r="110" fill="none" stroke="rgba(56, 189, 248, 0.08)" stroke-width="1.5" stroke-dasharray="4 6" />
+  <circle cx="200" cy="140" r="80" fill="none" stroke="rgba(244, 63, 94, 0.12)" stroke-width="1.5" />
+  
+  <!-- Disconnected Cloud Base -->
+  <path d="M150 180 H260 C276 180 290 166 290 150 C290 135 278 122 264 120 C260 96 238 78 212 78 C192 78 174 90 166 108 C150 110 138 124 138 140 C138 162 142 180 150 180 Z" 
+        fill="url(#cloudGrad)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="2.5" />
+
+  <!-- Cloud internal circuitry / grid lines -->
+  <path d="M170 140 H230 M200 110 V170" stroke="rgba(56, 189, 248, 0.2)" stroke-width="1.5" stroke-dasharray="2 3" />
+
+  <!-- Disconnected Signal Waves with Slash -->
+  <path d="M165 140 A36 36 0 0 1 235 140" fill="none" stroke="#64748b" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+  <path d="M180 150 A16 16 0 0 1 220 150" fill="none" stroke="#64748b" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+  
+  <!-- Central Offline Beacon / Pulse Dot -->
+  <circle cx="200" cy="155" r="5" fill="#f43f5e" filter="url(#softGlow)" />
+
+  <!-- Warning / Offline Badge floating -->
+  <g transform="translate(245, 95)">
+    <rect width="64" height="28" rx="14" fill="#1e1b4b" stroke="#f43f5e" stroke-width="1.5" />
+    <circle cx="14" cy="14" r="4" fill="#f43f5e" filter="url(#softGlow)" />
+    <text x="26" y="18" fill="#fecdd3" font-family="sans-serif" font-size="10" font-weight="700" letter-spacing="0.5">OFFLINE</text>
+  </g>
+
+  <!-- Fallback Cached Shield floating on left -->
+  <g transform="translate(90, 115)">
+    <rect width="70" height="28" rx="14" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1.5" />
+    <circle cx="14" cy="14" r="4" fill="#38bdf8" filter="url(#softGlow)" />
+    <text x="24" y="18" fill="#bae6fd" font-family="sans-serif" font-size="9.5" font-weight="700">FALLBACK</text>
+  </g>
+
+  <!-- Big Red Slash line signifying Network Drop -->
+  <line x1="125" y1="205" x2="275" y2="75" stroke="url(#accentGlow)" stroke-width="4.5" stroke-linecap="round" filter="url(#softGlow)" />
+
+  <!-- Bottom Data Anchor Nodes -->
+  <g transform="translate(130, 210)">
+    <circle cx="0" cy="0" r="3" fill="#38bdf8" />
+    <line x1="0" y1="0" x2="30" y2="0" stroke="rgba(56, 189, 248, 0.4)" stroke-width="1.5" />
+    <circle cx="30" cy="0" r="3" fill="#38bdf8" />
+  </g>
+  <g transform="translate(240, 210)">
+    <circle cx="0" cy="0" r="3" fill="#a855f7" />
+    <line x1="0" y1="0" x2="30" y2="0" stroke="rgba(168, 85, 247, 0.4)" stroke-width="1.5" />
+    <circle cx="30" cy="0" r="3" fill="#a855f7" />
+  </g>
+</svg>

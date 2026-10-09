@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actividad 6: Interceptor de Peticiones y Manejo de Estado Offline con Fallback</title>
+  <meta name="description" content="Programación de respuesta alternativa (fallback) en el evento fetch para detectar pérdida de conexión y renderizado de plantilla HTML personalizada Modo Sin Conexión.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./images/logo.svg">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Navbar / App Shell Header -->
+    <header class="app-header">
+      <div class="container header-container">
+        <div class="brand">
+          <img src="./images/logo.svg" alt="Offline Fallback Lab Logo" class="brand-logo" width="40" height="40">
+          <div class="brand-text">
+            <span class="brand-title">PWA Offline Interceptor</span>
+            <span class="brand-subtitle">Actividad 6 • Fallback &amp; Offline Mode</span>
+          </div>
+        </div>
+        <div class="header-badges">
+          <div id="network-status" class="badge badge-online">
+            <span class="badge-dot"></span>
+            <span class="badge-text">En Línea (Online)</span>
+          </div>
+          <div id="sw-status" class="badge badge-pending">
+            <span class="badge-dot"></span>
+            <span class="badge-text">SW: Verificando...</span>
+          </div>
+          <div class="badge badge-fallback">
+            <span class="badge-dot"></span>
+            <span class="badge-text">Fallback: Armado</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container main-content">
+      <!-- Hero Section / Presentación de la Actividad -->
+      <section class="hero-section card">
+        <div class="hero-content">
+          <div class="pill-tag">Manejo de Estado Offline • Fallback Response</div>
+          <h1 class="hero-title">
+            Interceptor de Peticiones &amp; <span class="gradient-text">Plantilla "Modo Sin Conexión"</span>
+          </h1>
+          <p class="hero-description">
+            Esta solución implementa la detección de pérdida de conexión a Internet en el evento <code>fetch</code> del Service Worker. Cuando la red falla y el recurso solicitado no existe en la memoria caché, el interceptor previene pantallas de error del navegador despachando automáticamente una <strong>plantilla HTML personalizada de contingencia (<code>offline.html</code>)</strong>.
+          </p>
+          <div class="hero-stats">
+            <div class="stat-item">
+              <span class="stat-number glow-rose">100%</span>
+              <span class="stat-label">Protección ante Caídas de Red</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number" id="fallback-count-badge">3</span>
+              <span class="stat-label">Tipos de Fallback (HTML, SVG, JSON)</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number" id="cached-count-badge">9</span>
+              <span class="stat-label">Recursos Precacheados</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-media">
+          <img src="./images/interceptor-diagram.svg" alt="Diagrama de flujo del Interceptor Fetch y Fallback" class="hero-img" width="500" height="270">
+        </div>
+      </section>
+
+      <!-- 4 Pilares Arquitectónicos -->
+      <section class="architecture-section">
+        <h2 class="section-title">Pilares de la Detección y Respuesta Fallback</h2>
+        <div class="pillars-grid">
+          <!-- Pilar 1 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-install">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <h3 class="pillar-title">1. Precacheo de la Plantilla</h3>
+            <p class="pillar-text">
+              En el evento <code>install</code>, se almacena en memoria caché la plantilla <code>offline.html</code> y sus gráficos vectoriales, asegurando su disponibilidad total sin red.
+            </p>
+            <div class="code-preview">
+              <code>cache.add('./offline.html')</code>
+            </div>
+          </div>
+
+          <!-- Pilar 2 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-intercept">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="pillar-title">2. Intercepción en <code>fetch</code></h3>
+            <p class="pillar-text">
+              Se interceptan las peticiones GET. Primero se consulta la Cache API con <code>caches.match()</code>; de no encontrarse, se intenta acudir a la red externa con <code>fetch()</code>.
+            </p>
+            <div class="code-preview">
+              <code>caches.match(req).then(...)</code>
+            </div>
+          </div>
+
+          <!-- Pilar 3 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-detect">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
+            <h3 class="pillar-title">3. Detección en <code>.catch()</code></h3>
+            <p class="pillar-text">
+              Si el usuario está offline o la red colapsa, la promesa de <code>fetch()</code> es rechazada. El bloque <code>.catch()</code> detecta la pérdida de conectividad en tiempo de ejecución.
+            </p>
+            <div class="code-preview">
+              <code>fetch(req).catch(networkError =>)</code>
+            </div>
+          </div>
+
+          <!-- Pilar 4 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-fallback">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h3 class="pillar-title">4. Renderizado de Contingencia</h3>
+            <p class="pillar-text">
+              Si la solicitud corresponde a navegación o HTML, el interceptor despacha inmediatamente la plantilla <code>offline.html</code> precargada, preservando la UX del usuario.
+            </p>
+            <div class="code-preview">
+              <code>return caches.match('offline.html')</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Banco de Pruebas Interactivo de Respuestas Fallback -->
+      <section class="bench-section">
+        <div>
+          <h2 class="section-title">Banco de Pruebas Interactivo de Contingencia</h2>
+          <p class="text-muted">Prueba en vivo cómo responde el Service Worker cuando se solicitan recursos no cacheados estando en modo online o simulando la pérdida de red.</p>
+        </div>
+
+        <div class="bench-grid">
+          <!-- Prueba 1: Fallback HTML Personalizado -->
+          <div class="card bench-card">
+            <div>
+              <div class="bench-header">
+                <span class="bench-tag tag-html">Requerimiento Principal</span>
+              </div>
+              <h3 class="bench-card-title">Plantilla HTML "Modo Sin Conexión"</h3>
+              <p class="bench-card-desc">
+                Solicita una página HTML inexistente en caché (<code>./pagina-no-cacheada.html</code>). Si no hay red, el Service Worker intercepta el fallo y devuelve la plantilla personalizada <strong><code>offline.html</code></strong>.
+              </p>
+            </div>
+            <div class="bench-actions">
+              <button id="btn-test-html" class="btn btn-danger">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Ejecutar Fetch a HTML no en caché
+              </button>
+              <button id="btn-open-uncached" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Navegar a URL no guardada en nueva pestaña
+              </button>
+              <button id="btn-preview-offline-modal" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Previsualizar Plantilla offline.html
+              </button>
+            </div>
+          </div>
+
+          <!-- Prueba 2: Fallback de Imágenes -->
+          <div class="card bench-card">
+            <div>
+              <div class="bench-header">
+                <span class="bench-tag tag-img">Soporte Multimedia</span>
+              </div>
+              <h3 class="bench-card-title">Fallback Gráfico para Imágenes</h3>
+              <p class="bench-card-desc">
+                Intenta cargar una imagen remota o no guardada (<code>foto-desconocida.png</code>). Cuando la red falla, el interceptor despacha un vector SVG de sustitución visual.
+              </p>
+            </div>
+            <div>
+              <div class="bench-actions">
+                <button id="btn-test-image" class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Probar Fallback de Imagen
+                </button>
+              </div>
+              <div id="image-demo-box" class="demo-result-box">
+                <span class="text-muted text-sm">El gráfico fallback SVG aparecerá aquí al probar</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prueba 3: Fallback de Datos / API -->
+          <div class="card bench-card">
+            <div>
+              <div class="bench-header">
+                <span class="bench-tag tag-api">Soporte Endpoints API</span>
+              </div>
+              <h3 class="bench-card-title">Fallback JSON para Datos</h3>
+              <p class="bench-card-desc">
+                Si una llamada fetch a un endpoint de datos (<code>/api/datos</code>) falla por desconexión, el Service Worker retorna una respuesta JSON estructurada de contingencia.
+              </p>
+            </div>
+            <div>
+              <div class="bench-actions">
+                <button id="btn-test-api" class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  Probar Fallback de API JSON
+                </button>
+              </div>
+              <div id="api-demo-box" class="demo-result-box">
+                <span class="text-muted text-sm">El JSON estructurado devuelto aparecerá aquí</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instrucciones para Prueba Offline en DevTools -->
+        <div class="card" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.04);">
+          <div style="display: flex; gap: 1rem; align-items: flex-start;">
+            <div style="color: var(--amber); margin-top: 2px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+              <h4 style="font-size: 0.98rem; font-weight: 700; color: #fde68a; margin-bottom: 0.35rem;">¿Cómo probar el Modo Offline en DevTools?</h4>
+              <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+                1. Presiona <kbd style="background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); color: #38bdf8;">F12</kbd> o clic derecho &rarr; <em>Inspeccionar</em>.<br>
+                2. Ve a la pestaña <strong>Red (Network)</strong>.<br>
+                3. En el selector de velocidad (normalmente dice <em>Sin limitación / No throttling</em>), selecciona <strong>Sin conexión (Offline)</strong>.<br>
+                4. Haz clic en <strong>"Ejecutar Fetch a HTML no en caché"</strong> o navega a cualquier página no precargada: ¡verás cómo el Service Worker intercepta la solicitud y renderiza la plantilla personalizada <code>offline.html</code>!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inspector en Vivo de la Cache API -->
+      <section class="lab-section card">
+        <div class="lab-header">
+          <div>
+            <h2 class="section-title mb-1">Inspector de Recursos Precacheados (Cache API)</h2>
+            <p class="text-muted">Verifica los recursos esenciales del App Shell y la presencia activa de la plantilla <code>offline.html</code>.</p>
+          </div>
+          <button id="btn-refresh-cache" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Actualizar Lista
+          </button>
+        </div>
+
+        <div class="cache-inspector-table-wrapper">
+          <table class="cache-table">
+            <thead>
+              <tr>
+                <th>Recurso</th>
+                <th>Clasificación</th>
+                <th>Estado en Cache API</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="cache-table-body">
+              <tr>
+                <td colspan="4" class="text-center py-4">Verificando memoria caché...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Consola de Diagnóstico de Peticiones en Tiempo Real -->
+        <div class="diagnostic-box">
+          <div class="diagnostic-header">
+            <span class="diagnostic-title">
+              <span class="pulse-indicator"></span> Registro de Intercepción Fetch y Fallback en Vivo
+            </span>
+            <button id="btn-clear-log" class="btn-text">Limpiar Consola</button>
+          </div>
+          <div id="diagnostic-log" class="diagnostic-log">
+            <div class="log-entry log-info">[Sistema] Listo. Interceptor armado para detectar desconexión y servir offline.html.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal para Vista Previa de offline.html -->
+    <div id="modal-backdrop" class="modal-backdrop">
+      <div class="modal-window">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="pulse-indicator" style="background: var(--rose); box-shadow: 0 0 8px var(--rose);"></span>
+            Vista Previa de la Plantilla Personalizada: <code>offline.html</code>
+          </div>
+          <button id="modal-close-btn" class="modal-close-btn" title="Cerrar modal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <iframe id="modal-iframe" class="modal-iframe" title="Vista Previa de Modo Sin Conexión"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="container footer-content">
+        <p>Actividad 6 • Interceptor de Peticiones y Manejo de Estado Offline</p>
+        <p class="text-muted text-sm">Respuesta alternativa (fallback) con renderizado de plantilla HTML personalizada.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

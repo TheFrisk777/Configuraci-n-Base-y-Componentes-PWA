@@ -1,0 +1,17 @@
+{
+  "name": "PWA Offline Interceptor Lab",
+  "short_name": "OfflineLab",
+  "description": "Interceptor de peticiones y manejo de estado offline con fallback personalizado",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "icons": [
+    {
+      "src": "./images/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
