@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  
+  <title>NovaFlow v3 — Service Worker & Persistencia Offline (IndexedDB + Cache API)</title>
+  <meta name="description" content="PWA completa con registro y ciclo de vida de Service Worker, estrategias de caché avanzadas y almacenamiento asíncrono en IndexedDB para modo offline.">
+
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Metadatos de Sistema y Navegación PWA -->
+  <meta name="theme-color" content="#0f172a">
+  <meta name="background-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NovaFlow v3">
+
+  <!-- Iconos -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+  <!-- Tipografía Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Luces ambientales de fondo -->
+  <div class="ambient-glow ambient-top"></div>
+  <div class="ambient-glow ambient-bottom"></div>
+
+  <!-- Banner de Actualización del Service Worker (Waiting Worker) -->
+  <div id="swUpdateBanner" class="sw-update-banner hidden">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      <span style="font-size: 0.88rem; font-weight: 600; color: #f8fafc;">
+        Nueva versión disponible en segundo plano. Actualiza para activar las últimas mejoras.
+      </span>
+    </div>
+    <button id="btnApplyUpdate" class="btn btn-primary btn-sm">Actualizar Ahora (skipWaiting)</button>
+  </div>
+
+  <!-- HEADER PRINCIPAL -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>NovaFlow Data Hub</h1>
+        <span>Service Worker &amp; Offline Persistence v3.0</span>
+      </div>
+    </div>
+
+    <!-- Indicadores de estado en tiempo real -->
+    <div class="header-status-group">
+      <!-- Estado de Red -->
+      <div class="status-pill" id="networkStatusPill" title="Estado de conectividad">
+        <span class="status-dot online" id="connectionStatusDot"></span>
+        <span id="connectionStatusText">En Línea</span>
+      </div>
+
+      <!-- Estado del Service Worker -->
+      <div class="status-pill sw-badge" title="Versión y Caché del Service Worker">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+        <span id="swVersionBadge">v3.0.0</span>
+      </div>
+
+      <!-- Estado de IndexedDB -->
+      <div class="status-pill idb-badge" title="Almacén de datos IndexedDB">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+        <span id="idbRecordsBadge">Cargando...</span>
+      </div>
+
+      <!-- Botón de Simulación Offline -->
+      <button id="btnToggleOfflineSim" class="btn btn-secondary btn-sm" title="Simular desconexión de red sin desactivar Wi-Fi">
+        Simular Modo Offline
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="main-layout">
+
+    <!-- Alerta de Modo Offline -->
+    <div id="offlineAlertBanner" class="offline-alert-banner hidden">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        <div>
+          <strong style="color: #f8fafc;">Modo Sin Conexión Activo:</strong> Estás navegando y operando mediante persistencia local en <strong>IndexedDB</strong> y recursos servidos desde <strong>Cache API</strong>.
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="app.syncOfflineQueue()">
+        Intentar Sincronizar
+      </button>
+    </div>
+
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
+    <nav class="tabs-nav" aria-label="Navegación principal de módulos">
+      <button class="tab-btn active" data-tab="tab-idb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+        1. Persistencia Offline (IndexedDB)
+      </button>
+      <button class="tab-btn" data-tab="tab-cache">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+        2. Estrategias de Caché
+      </button>
+      <button class="tab-btn" data-tab="tab-lifecycle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+        3. Ciclo de Vida del Service Worker
+      </button>
+      <button class="tab-btn" data-tab="tab-storage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        4. Explorador de Almacenamiento
+      </button>
+    </nav>
+
+    <!-- =====================================================================
+         PESTAÑA 1: PERSISTENCIA ASÍNCRONA EN INDEXEDDB (OFFLINE-FIRST)
+         ===================================================================== -->
+    <section id="tab-idb" class="tab-content active">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+              Persistencia Asíncrona con IndexedDB
+            </h2>
+            <p>Los datos se leen y escriben directamente en el almacén de objetos local. Las mutaciones realizadas sin conexión se acumulan en la cola offline y se sincronizan al restablecer la red.</p>
+          </div>
+
+          <div class="toolbar-actions">
+            <!-- Botón de Sincronización Manual con Contador -->
+            <button id="btnTriggerSync" class="btn btn-secondary" title="Sincronizar cola de mutaciones con el servidor">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Sincronizar Cola
+              <span id="syncPendingBadge" class="sync-status-badge pending" style="display: none; margin-left: 0.35rem;">0</span>
+            </button>
+
+            <!-- Botón Crear Nuevo Proyecto -->
+            <button id="btnOpenCreateModal" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Nuevo Proyecto
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de herramientas: Búsqueda y Filtros -->
+        <div class="data-toolbar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="projectSearchInput" placeholder="Buscar proyectos por título o detalle...">
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="filterCategory" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Categoría:</label>
+            <select id="filterCategory" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 0.5rem 0.8rem; color: var(--text-main); font-size: 0.85rem; outline: none;">
+              <option value="ALL">Todas las Categorías</option>
+              <option value="Frontend">Frontend</option>
+              <option value="Service Worker">Service Worker</option>
+              <option value="Persistencia">Persistencia</option>
+              <option value="Rendimiento">Rendimiento</option>
+              <option value="Arquitectura">Arquitectura</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Grid de Proyectos Almacenados en IndexedDB -->
+        <div id="projectsGrid" class="projects-grid">
+          <!-- Renderizado dinámico desde app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PESTAÑA 2: ESTRATEGIAS DE CACHÉ INTERACTIVAS (CACHE API)
+         ===================================================================== -->
+    <section id="tab-cache" class="tab-content">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              Laboratorio de Estrategias de Caché
+            </h2>
+            <p>Comprueba en vivo cómo el Service Worker gestiona diferentes tipos de recursos según la política más eficiente para garantizar velocidad y disponibilidad offline.</p>
+          </div>
+        </div>
+
+        <!-- Grid con las 4 Estrategias Principales -->
+        <div class="strategy-grid">
+
+          <!-- 1. Cache-First -->
+          <div class="strategy-box">
+            <div>
+              <div class="strategy-header">
+                <span class="strategy-tag cache-first">Cache First</span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #34d399;">~0-2 ms</span>
+              </div>
+              <h3 class="strategy-title">Recursos Estáticos &amp; App Shell</h3>
+              <p class="strategy-desc">
+                Busca de inmediato en caché local. Si existe coincidencia, entrega el recurso sin latencia de red. Si falla, consulta la red y añade a la caché dinámica. Ideal para CSS, JS, imágenes y fuentes.
+              </p>
+              <div class="strategy-metrics">
+                <span>Objetivo: <code>styles.css</code></span>
+                <span style="color: #34d399; font-weight: 600;">Máxima Velocidad</span>
+              </div>
+            </div>
+            <button id="btnTestCacheFirst" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Probar Estrategia Cache-First
+            </button>
+          </div>
+
+          <!-- 2. Network-First con Fallback -->
+          <div class="strategy-box">
+            <div>
+              <div class="strategy-header">
+                <span class="strategy-tag network-first">Network First</span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8;">Prioridad Frescura</span>
+              </div>
+              <h3 class="strategy-title">Datos Críticos &amp; API Dinámica</h3>
+              <p class="strategy-desc">
+                Intenta obtener los datos frescos de la red y guarda una copia en caché. Si el usuario está offline o la red falla, entrega la última versión válida respaldada en caché.
+              </p>
+              <div class="strategy-metrics">
+                <span>Objetivo: <code>/api/projects</code></span>
+                <span style="color: #38bdf8; font-weight: 600;">Resiliencia Total</span>
+              </div>
+            </div>
+            <button id="btnTestNetworkFirst" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Probar Estrategia Network-First
+            </button>
+          </div>
+
+          <!-- 3. Stale-While-Revalidate -->
+          <div class="strategy-box">
+            <div>
+              <div class="strategy-header">
+                <span class="strategy-tag swr">Stale While Revalidate</span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #c084fc;">Híbrido</span>
+              </div>
+              <h3 class="strategy-title">Feeds en Vivo &amp; Métricas</h3>
+              <p class="strategy-desc">
+                Devuelve de forma instantánea la versión que se encuentra en caché (stale) mientras en segundo plano consulta la red para actualizar la caché con datos nuevos.
+              </p>
+              <div class="strategy-metrics">
+                <span>Objetivo: <code>/api/feed</code></span>
+                <span style="color: #c084fc; font-weight: 600;">Respuesta Instantánea</span>
+              </div>
+            </div>
+            <button id="btnTestSWR" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Probar Stale-While-Revalidate
+            </button>
+          </div>
+
+          <!-- 4. Offline Fallback Page -->
+          <div class="strategy-box">
+            <div>
+              <div class="strategy-header">
+                <span class="strategy-tag fallback">Offline Fallback</span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #fbbf24;">Navegación</span>
+              </div>
+              <h3 class="strategy-title">Página de Respaldo Offline</h3>
+              <p class="strategy-desc">
+                Cuando el usuario intenta navegar a una ruta HTML que no está precacheada y no tiene conexión a internet, el Service Worker intercepta la navegación y sirve <code>offline.html</code>.
+              </p>
+              <div class="strategy-metrics">
+                <span>Objetivo: <code>offline.html</code></span>
+                <span style="color: #fbbf24; font-weight: 600;">Previene Pantalla Blanca</span>
+              </div>
+            </div>
+            <button id="btnTestOfflineFallback" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Simular Fallback de Navegación
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Resultado de la última prueba de rendimiento de caché -->
+        <div style="margin-top: 1rem;">
+          <h4 style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+            Resultado del Último Benchmark de Caché:
+          </h4>
+          <div id="cacheBenchmarkResult">
+            <p style="color: var(--text-dim); font-size: 0.85rem;">Haz clic en cualquiera de las pruebas superiores para medir la latencia y la procedencia de la respuesta.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PESTAÑA 3: CICLO DE VIDA DEL SERVICE WORKER & DIAGNÓSTICO
+         ===================================================================== -->
+    <section id="tab-lifecycle" class="tab-content">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+              Ciclo de Vida del Service Worker
+            </h2>
+            <p>Monitorea las fases de Registro, Instalación (Pre-caching), Activación (Limpieza de versiones antiguas) y Control de Clientes.</p>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btnCheckUpdates" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Verificar Actualizaciones
+            </button>
+            <button id="btnClearAllCaches" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Limpiar Todas las Cachés
+            </button>
+            <button id="btnUnregisterSW" class="btn btn-outline-danger btn-sm">
+              Desregistrar SW
+            </button>
+            <button id="btnReRegisterSW" class="btn btn-primary btn-sm">
+              Re-registrar SW
+            </button>
+          </div>
+        </div>
+
+        <!-- Línea de tiempo visual del ciclo de vida -->
+        <div class="lifecycle-timeline">
+          <div class="timeline-step active" id="step-registered">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            1. Registro (register)
+          </div>
+          <div class="timeline-step" id="step-installing">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            2. Instalación &amp; Pre-cache
+          </div>
+          <div class="timeline-step active" id="step-activated">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+            3. Activación Limpia &amp; Claim
+          </div>
+        </div>
+
+        <!-- Tabla de Diagnóstico Técnico -->
+        <table class="diagnostics-table">
+          <thead>
+            <tr>
+              <th>Parámetro</th>
+              <th>Valor Detectado</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Estado Actual</strong></td>
+              <td><span id="swStatusVal" style="color: #34d399; font-weight: 600;">Verificando...</span></td>
+              <td>Fase en la que se encuentra la instancia del Service Worker en el navegador.</td>
+            </tr>
+            <tr>
+              <td><strong>Ámbito (Scope)</strong></td>
+              <td><code id="swScopeVal">./</code></td>
+              <td>Rango de URLs bajo el control de intercepción de este Service Worker.</td>
+            </tr>
+            <tr>
+              <td><strong>Versión de Caché</strong></td>
+              <td><code id="swVersionVal">v3.0.0</code></td>
+              <td>Identificador semántico para control de purga de cachés antiguas.</td>
+            </tr>
+            <tr>
+              <td><strong>Controlador Activo</strong></td>
+              <td><span id="swControllerVal">Comprobando...</span></td>
+              <td>Indica si las peticiones de esta pestaña son interceptadas activamente.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         PESTAÑA 4: EXPLORADOR DE ALMACENAMIENTO (CACHE API & INDEXEDDB)
+         ===================================================================== -->
+    <section id="tab-storage" class="tab-content">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+              Explorador de Almacenamiento Local
+            </h2>
+            <p>Inspecciona en tiempo real las estructuras guardadas en Cache API (recursos binarios y respuestas HTTP) e IndexedDB (registros JSON estructurados).</p>
+          </div>
+          <button id="btnRefreshStorage" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Refrescar Inspección
+          </button>
+        </div>
+
+        <div style="font-size: 0.85rem; color: var(--accent-sky); margin-bottom: 1.5rem; font-family: var(--font-mono);" id="storageEstimateText">
+          Estimando cuota...
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+          
+          <!-- Contenedor Cache API -->
+          <div>
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
+              Almacenes de Cache API
+            </h3>
+            <div id="cacheListContainer">
+              <p style="color: var(--text-dim); font-size: 0.85rem;">Inspeccionando almacenes...</p>
+            </div>
+          </div>
+
+          <!-- Contenedor IndexedDB Raw JSON -->
+          <div>
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: #c084fc; display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+              Estructura Cruda en IndexedDB
+            </h3>
+            <pre id="idbRawViewer" style="background: rgba(9, 13, 22, 0.8); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; font-family: var(--font-mono); font-size: 0.75rem; color: #a5b4fc; max-height: 280px; overflow-y: auto;">Cargando snapshot...</pre>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         CONSOLA DE EVENTOS EN TIEMPO REAL
+         ===================================================================== -->
+    <div class="glass-card" style="margin-top: 1.5rem;">
+      <div class="card-header" style="margin-bottom: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <h3 style="font-size: 0.95rem; font-weight: 700;">Registro de Eventos en Tiempo Real (Log)</h3>
+        </div>
+        <button id="btnClearLog" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;">
+          Limpiar Consola
+        </button>
+      </div>
+      <div id="consoleLogBox" class="console-log-box"></div>
+    </div>
+
+  </main>
+
+  <!-- =====================================================================
+       MODAL DE CREACIÓN / EDICIÓN DE PROYECTOS (INDEXEDDB)
+       ===================================================================== -->
+  <div id="projectModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nuevo Proyecto</h3>
+        <button id="btnCloseModal" class="icon-btn" aria-label="Cerrar modal">&times;</button>
+      </div>
+
+      <form id="projectForm">
+        <input type="hidden" id="projectIdInput">
+
+        <div class="form-group">
+          <label for="projectTitleInput">Título del Proyecto *</label>
+          <input type="text" id="projectTitleInput" required placeholder="Ej: Implementar Background Sync">
+        </div>
+
+        <div class="form-group">
+          <label for="projectDescInput">Descripción Detallada</label>
+          <textarea id="projectDescInput" rows="3" placeholder="Detalles de la tarea o requerimiento offline..."></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="projectCategoryInput">Categoría</label>
+            <select id="projectCategoryInput">
+              <option value="Frontend">Frontend</option>
+              <option value="Service Worker">Service Worker</option>
+              <option value="Persistencia">Persistencia</option>
+              <option value="Rendimiento">Rendimiento</option>
+              <option value="Arquitectura">Arquitectura</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="projectPriorityInput">Prioridad</label>
+            <select id="projectPriorityInput">
+              <option value="Baja">Baja</option>
+              <option value="Media" selected>Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Crítica">Crítica</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="projectStatusInput">Estado</label>
+          <select id="projectStatusInput">
+            <option value="Pendiente">Pendiente</option>
+            <option value="En Progreso" selected>En Progreso</option>
+            <option value="Completado">Completado</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnCancelModal" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar en IndexedDB</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Contenedor de Alertas Toast Flotantes -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts: Gestor IndexedDB y Aplicación Central -->
+  <script src="idb.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

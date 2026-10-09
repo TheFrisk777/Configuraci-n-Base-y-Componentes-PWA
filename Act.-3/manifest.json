@@ -1,0 +1,27 @@
+{
+  "name": "NovaFlow Data Hub & Service Worker Engine",
+  "short_name": "NovaFlow v3",
+  "description": "PWA con Service Worker avanzado, estrategias de caché estáticas y dinámicas, y persistencia offline con IndexedDB.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#090d16",
+  "lang": "es-ES",
+  "categories": ["productivity", "utilities", "developer"],
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
