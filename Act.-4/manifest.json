@@ -1,0 +1,16 @@
+{
+  "name": "Actividad 5 - Cache API & Cache-First",
+  "short_name": "CacheFirstApp",
+  "description": "Demostración de Cache API y estrategia de caché estática Cache-First con App Shell",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "./images/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

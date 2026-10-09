@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actividad 5: Cache API y Estrategia Cache-First</title>
+  <meta name="description" content="Implementación de Cache API y estrategia de almacenamiento en caché estática Cache-First para el App Shell">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./images/logo.svg">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Navbar / App Shell Header -->
+    <header class="app-header">
+      <div class="container header-container">
+        <div class="brand">
+          <img src="./images/logo.svg" alt="App Shell Logo" class="brand-logo" width="40" height="40">
+          <div class="brand-text">
+            <span class="brand-title">PWA Cache Lab</span>
+            <span class="brand-subtitle">Actividad 5 • Cache-First</span>
+          </div>
+        </div>
+        <div class="header-badges">
+          <div id="network-status" class="badge badge-online">
+            <span class="badge-dot"></span>
+            <span class="badge-text">En Línea</span>
+          </div>
+          <div id="sw-status" class="badge badge-pending">
+            <span class="badge-dot"></span>
+            <span class="badge-text">SW: Verificando...</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container main-content">
+      <!-- Hero Section / App Shell Banner -->
+      <section class="hero-section card">
+        <div class="hero-content">
+          <div class="pill-tag">Estrategia de Caché Estática</div>
+          <h1 class="hero-title">Cache API &amp; App Shell con <span class="gradient-text">Cache-First</span></h1>
+          <p class="hero-description">
+            Esta aplicación implementa la interceptación de peticiones mediante Service Worker. Los recursos estáticos del núcleo (HTML, CSS, JS e imágenes) se almacenan en caché durante el evento <code>install</code> y se despachan primero desde la memoria caché ante cualquier solicitud de red.
+          </p>
+          <div class="hero-stats">
+            <div class="stat-item">
+              <span class="stat-number">100%</span>
+              <span class="stat-label">Soporte Offline</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">&lt; 10ms</span>
+              <span class="stat-label">Tiempo de Respuesta Caché</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number" id="cached-count-badge">7</span>
+              <span class="stat-label">Recursos en App Shell</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-media">
+          <img src="./images/hero-illustration.svg" alt="Diagrama App Shell Cache-First" class="hero-img" width="400" height="240">
+        </div>
+      </section>
+
+      <!-- Tres Pilares Requeridos -->
+      <section class="architecture-section">
+        <h2 class="section-title">Pilares de la Implementación</h2>
+        <div class="pillars-grid">
+          <!-- Pilar 1 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-install">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <h3 class="pillar-title">1. Evento <code>install</code></h3>
+            <p class="pillar-text">
+              Durante la instalación del Service Worker, se abre la memoria caché mediante <code>caches.open('app-shell-v1')</code> y se realiza el pre-cacheo con <code>cache.addAll()</code>.
+            </p>
+            <div class="code-preview">
+              <code>event.waitUntil(caches.open(...))</code>
+            </div>
+          </div>
+
+          <!-- Pilar 2 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-shell">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            </div>
+            <h3 class="pillar-title">2. Almacenamiento App Shell</h3>
+            <p class="pillar-text">
+              Se preservan los recursos estáticos esenciales: HTML estructural, hojas de estilo CSS, scripts JavaScript de la aplicación e imágenes vectoriales base (SVG).
+            </p>
+            <div class="code-preview">
+              <code>['index.html', 'style.css', 'app.js', ...]</code>
+            </div>
+          </div>
+
+          <!-- Pilar 3 -->
+          <div class="card pillar-card">
+            <div class="pillar-icon-box pilar-fetch">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="pillar-title">3. Intercepción <code>fetch</code></h3>
+            <p class="pillar-text">
+              Estrategia <strong>Cache-First</strong>: intercepta las peticiones con <code>caches.match()</code>. Si el recurso está en memoria se devuelve inmediatamente; de lo contrario acude a la red.
+            </p>
+            <div class="code-preview">
+              <code>caches.match(req) || fetch(req)</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel Interactivo de Verificación de Caché -->
+      <section class="lab-section card">
+        <div class="lab-header">
+          <div>
+            <h2 class="section-title mb-1">Inspector de Memoria Caché en Vivo</h2>
+            <p class="text-muted">Consulta en tiempo real el contenido almacenado en la Cache API del navegador para el App Shell.</p>
+          </div>
+          <button id="btn-refresh-cache" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Actualizar Lista
+          </button>
+        </div>
+
+        <div class="cache-inspector-table-wrapper">
+          <table class="cache-table">
+            <thead>
+              <tr>
+                <th>Recurso del App Shell</th>
+                <th>Tipo</th>
+                <th>Estado en Cache API</th>
+                <th>Acción de Prueba</th>
+              </tr>
+            </thead>
+            <tbody id="cache-table-body">
+              <tr>
+                <td colspan="4" class="text-center py-4">Explorando Cache API...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Consola de Diagnóstico de Peticiones -->
+        <div class="diagnostic-box">
+          <div class="diagnostic-header">
+            <span class="diagnostic-title">
+              <span class="pulse-indicator"></span> Registro de Pruebas Fetch en Tiempo Real
+            </span>
+            <button id="btn-clear-log" class="btn-text">Limpiar Registro</button>
+          </div>
+          <div id="diagnostic-log" class="diagnostic-log">
+            <div class="log-entry log-info">[Sistema] Listo para interceptar solicitudes de recursos. Haz clic en "Probar Fetch" arriba.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel de Prueba de Estrategia Cache-First -->
+      <section class="test-bench-grid">
+        <div class="card bench-card">
+          <h3 class="bench-title">Simular Petición a Recurso del App Shell</h3>
+          <p class="text-muted text-sm">Prueba cómo el Service Worker intercepta un recurso precacheado y lo sirve desde caché a velocidad ultrarrápida.</p>
+          <div class="bench-actions">
+            <button id="btn-test-style" class="btn btn-primary">Probar Fetch: style.css</button>
+            <button id="btn-test-logo" class="btn btn-primary">Probar Fetch: logo.svg</button>
+          </div>
+        </div>
+
+        <div class="card bench-card">
+          <h3 class="bench-title">Comprobación de Funcionamiento Offline</h3>
+          <p class="text-muted text-sm">Puedes desconectar tu conexión a Internet o activar el modo Offline en la pestaña Network de DevTools y recargar la página. ¡El App Shell seguirá funcionando!</p>
+          <div class="offline-callout">
+            <div class="offline-badge-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              Garantía App Shell
+            </div>
+            <span class="offline-callout-text">Cero pantallas de error de dinosaurio o pérdida de interfaz.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="container footer-content">
+        <p>Actividad 5 • Service Worker Cache API &amp; Estrategia Cache-First</p>
+        <p class="text-muted text-sm">Diseñado para alto rendimiento y disponibilidad offline completa.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
